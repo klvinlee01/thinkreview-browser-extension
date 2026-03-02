@@ -288,14 +288,6 @@ async function createIntegratedReviewPanel(patchUrl) {
           <span id="review-subscription-label" class="thinkreview-header-subscription" aria-label="Current plan"></span>
         </div>
         <div class="thinkreview-header-actions">
-          <span class="thinkreview-copy-all-btn-wrapper">
-            <button id="copy-all-review-btn" class="thinkreview-copy-all-btn" aria-label="Copy all">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="currentColor"/>
-              </svg>
-            </button>
-            <span class="thinkreview-copy-all-tooltip" aria-hidden="true">Copy all</span>
-          </span>
           <span class="thinkreview-regenerate-btn-wrapper">
             <button id="regenerate-review-btn" class="thinkreview-regenerate-btn" aria-label="Regenerate review">
               ${refreshIconSvg}

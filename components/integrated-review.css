@@ -2156,6 +2156,8 @@ body[data-theme="high-contrast"] #gitlab-mr-integrated-review .thinkreview-login
 
 /* Quality Scorecard Styles */
 #gitlab-mr-integrated-review .thinkreview-quality-scorecard {
+  width: 100%;
+  box-sizing: border-box;
   padding: 16px;
   background-color: var(--thinkreview-bg-transparent);
   border-radius: 4px;
@@ -2163,7 +2165,19 @@ body[data-theme="high-contrast"] #gitlab-mr-integrated-review .thinkreview-login
 }
 
 #gitlab-mr-integrated-review .thinkreview-scorecard-header {
+  width: 100%;
+  box-sizing: border-box;
   margin-bottom: 12px;
+}
+
+/* Row above Quality Score: copy-all aligned to the right */
+#gitlab-mr-integrated-review .thinkreview-scorecard-copy-all-row {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 4px;
 }
 
 #gitlab-mr-integrated-review .thinkreview-scorecard-content {
