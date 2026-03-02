@@ -594,82 +594,6 @@ async function createIntegratedReviewPanel(patchUrl) {
     });
   }
   
-  // Fast tooltip for copy-all button
-  const copyAllWrapper = container.querySelector('.thinkreview-copy-all-btn-wrapper');
-  if (copyAllWrapper) {
-    let copyAllTooltipTimeout;
-    const copyAllTooltipEl = copyAllWrapper.querySelector('.thinkreview-copy-all-tooltip');
-    copyAllWrapper.addEventListener('mouseenter', () => {
-      copyAllTooltipTimeout = setTimeout(() => {
-        if (copyAllTooltipEl) copyAllTooltipEl.classList.add('thinkreview-tooltip-visible');
-      }, 200);
-    });
-    copyAllWrapper.addEventListener('mouseleave', () => {
-      clearTimeout(copyAllTooltipTimeout);
-      if (copyAllTooltipEl) copyAllTooltipEl.classList.remove('thinkreview-tooltip-visible');
-    });
-  }
-
-  // Add event listener for the copy-all button
-  const copyAllButton = document.getElementById('copy-all-review-btn');
-  if (copyAllButton) {
-    copyAllButton.addEventListener('click', async (e) => {
-      e.stopPropagation();
-
-      if (!currentReviewData) return;
-
-      let markdown = '';
-      try {
-        const module = await import('./utils/review-markdown.js');
-        markdown = module.buildReviewMarkdown(currentReviewData);
-      } catch (error) {
-        dbgWarn('Failed to load review markdown utils:', error);
-        return;
-      }
-      if (!markdown.trim()) return;
-
-      try {
-        await navigator.clipboard.writeText(markdown);
-
-        // Show success feedback (green checkmark)
-        const originalHTML = copyAllButton.innerHTML;
-        copyAllButton.innerHTML = `
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="currentColor"/>
-          </svg>
-        `;
-        copyAllButton.style.color = '#4ade80';
-        setTimeout(() => {
-          copyAllButton.innerHTML = originalHTML;
-          copyAllButton.style.color = '';
-        }, 2000);
-
-        // Track copy-all action
-        try {
-          const analyticsModule = await import(chrome.runtime.getURL('utils/analytics-service.js'));
-          analyticsModule.trackUserAction('copy_all_review', {
-            context: 'integrated_review_panel'
-          }).catch(() => {});
-        } catch (error) { /* silent */ }
-      } catch (error) {
-        dbgWarn('Failed to copy all review content:', error);
-
-        // Show error feedback
-        const originalHTML = copyAllButton.innerHTML;
-        copyAllButton.innerHTML = `
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/>
-          </svg>
-        `;
-        copyAllButton.style.color = '#ef4444';
-        setTimeout(() => {
-          copyAllButton.innerHTML = originalHTML;
-          copyAllButton.style.color = '';
-        }, 2000);
-      }
-    });
-  }
-
   // Fast tooltip for regenerate button (short delay vs native title)
   const regenerateWrapper = container.querySelector('.thinkreview-regenerate-btn-wrapper');
   if (regenerateWrapper) {
@@ -1515,6 +1439,67 @@ async function displayIntegratedReview(review, patchContent, patchSize = null, s
     } else {
       reviewMetricsContainer.classList.add('gl-hidden');
     }
+  }
+
+  // Setup copy-all review button in the quality scorecard header (rendered above)
+  const copyAllButton = document.getElementById('copy-all-review-btn');
+  if (copyAllButton && !copyAllButton.dataset.copyBound) {
+    copyAllButton.dataset.copyBound = '1';
+    copyAllButton.addEventListener('click', async (e) => {
+      e.stopPropagation();
+
+      if (!currentReviewData) return;
+
+      let markdown = '';
+      try {
+        const module = await import('./utils/review-markdown.js');
+        markdown = module.buildReviewMarkdown(currentReviewData);
+      } catch (error) {
+        dbgWarn('Failed to load review markdown utils:', error);
+        return;
+      }
+      if (!markdown.trim()) return;
+
+      try {
+        await navigator.clipboard.writeText(markdown);
+
+        // Show success feedback (green checkmark)
+        const originalHTML = copyAllButton.innerHTML;
+        copyAllButton.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="currentColor"/>
+          </svg>
+        `;
+        copyAllButton.style.color = '#4ade80';
+        setTimeout(() => {
+          copyAllButton.innerHTML = originalHTML;
+          copyAllButton.style.color = '';
+        }, 2000);
+
+        // Track copy-all action
+        try {
+          const analyticsModule = await import(chrome.runtime.getURL('utils/analytics-service.js'));
+          analyticsModule.trackUserAction('copy_all_review', {
+            context: 'integrated_review_panel'
+          }).catch(() => {});
+        } catch (error) { /* silent */ }
+      } catch (error) {
+        dbgWarn('Failed to copy all review content:', error);
+
+        // Show error feedback
+        const originalHTML = copyAllButton.innerHTML;
+        copyAllButton.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/>
+          </svg>
+        `;
+        copyAllButton.style.color = '#ef4444';
+        setTimeout(() => {
+          copyAllButton.innerHTML = originalHTML;
+          copyAllButton.style.color = '';
+        }, 2000);
+      }
+    });
   }
 
   // Show score popup and notification indicator on AI Review button if panel is minimized
