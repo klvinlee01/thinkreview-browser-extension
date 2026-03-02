@@ -533,6 +533,9 @@ async function createIntegratedReviewPanel(patchUrl) {
       const reviewContent = document.getElementById('review-content');
       const reviewError = document.getElementById('review-error');
       
+      // Clear previous review data so Copy All can't use stale content
+      currentReviewData = null;
+
       // Show loading indicator
       reviewLoading.classList.remove('gl-hidden');
       reviewContent.classList.add('gl-hidden');
@@ -633,6 +636,9 @@ async function createIntegratedReviewPanel(patchUrl) {
       const reviewContent = document.getElementById('review-content');
       const reviewError = document.getElementById('review-error');
       
+      // Clear previous review data so Copy All can't use stale content
+      currentReviewData = null;
+
       if (reviewLoading) reviewLoading.classList.remove('gl-hidden');
       if (reviewContent) reviewContent.classList.add('gl-hidden');
       if (reviewError) reviewError.classList.add('gl-hidden');
