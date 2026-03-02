@@ -734,24 +734,39 @@ body[data-theme="high-contrast"] #gitlab-mr-integrated-review .thinkreview-table
   margin-right: 8px;
 }
 
+/* Copy-all tooltip: same method as configure tooltip (CSS-only hover, above button) */
 #gitlab-mr-integrated-review .thinkreview-copy-all-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.95);
+  color: #ffffff;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 1000;
+}
+
+#gitlab-mr-integrated-review .thinkreview-copy-all-tooltip::after {
+  content: '';
   position: absolute;
   top: 100%;
   left: 50%;
-  transform: translateX(-50%) translateY(2px);
-  margin-top: 4px;
-  padding: 4px 8px;
-  background: #fff;
-  color: #333;
-  font-size: 12px;
-  white-space: nowrap;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  border: 1px solid #e1e4e8;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.1s ease;
-  z-index: 1000;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.95);
+}
+
+#gitlab-mr-integrated-review .thinkreview-copy-all-btn-wrapper:hover .thinkreview-copy-all-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
 }
 
 #gitlab-mr-integrated-review .thinkreview-copy-all-tooltip.thinkreview-tooltip-visible {
