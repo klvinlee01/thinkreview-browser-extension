@@ -65,6 +65,9 @@ let createCopyButton = null;
 let copyItemContent = null;
 let attachCopyButtonToItem = null;
 
+// Store current review data for copy-all functionality
+let currentReviewData = null;
+
 // Badge utils
 let createNewBadge = null;
 // Cache the badge module loading promise to avoid repeated imports
@@ -94,12 +97,17 @@ async function initFormattingUtils() {
   }
 }
 
+let showCopySuccessFeedback = null;
+let showCopyErrorFeedback = null;
+
 async function initCopyButtonUtils() {
   try {
     const module = await import('./utils/item-copy-button.js');
     createCopyButton = module.createCopyButton;
     copyItemContent = module.copyItemContent;
     attachCopyButtonToItem = module.attachCopyButtonToItem;
+    showCopySuccessFeedback = module.showCopySuccessFeedback;
+    showCopyErrorFeedback = module.showCopyErrorFeedback;
     dbgLog('Copy button utils loaded');
   } catch (e) {
     dbgWarn('Failed to load copy button utils', e);
@@ -360,6 +368,13 @@ async function createIntegratedReviewPanel(patchUrl) {
           </div>
         </div>
         <div id="review-content" class="gl-hidden">
+          <div class="thinkreview-tabs-wrapper">
+            <div class="thinkreview-tab-buttons" id="review-tab-buttons">
+              <button type="button" class="thinkreview-tab-btn active" data-tab="review">Review</button>
+              <button type="button" class="thinkreview-tab-btn gl-hidden" data-tab="code-suggestions" id="tab-btn-code-suggestions">Code Suggestions</button>
+            </div>
+            <div class="thinkreview-tab-panels">
+              <div class="thinkreview-tab-panel active" id="tab-panel-review" data-tab="review">
           <div id="review-scroll-container">
             <div id="review-prompt-container"></div>
             <div id="review-metrics-container" class="gl-mb-4"></div>
@@ -404,6 +419,12 @@ async function createIntegratedReviewPanel(patchUrl) {
               </div>
             </div>
             <div id="chat-log" class="thinkreview-chat-log"></div>
+          </div>
+              </div>
+              <div class="thinkreview-tab-panel" id="tab-panel-code-suggestions" data-tab="code-suggestions">
+                <div id="review-code-suggestions-inner" class="thinkreview-code-suggestions-scroll"></div>
+              </div>
+            </div>
           </div>
           <div id="chat-input-container" class="thinkreview-chat-input-container">
             <textarea id="chat-input" class="thinkreview-chat-input" placeholder="Ask a follow-up question..." maxlength="2000"></textarea>
@@ -520,6 +541,35 @@ async function createIntegratedReviewPanel(patchUrl) {
     });
   }
   
+  // Tab switching for Review | Code Suggestions
+  const tabButtonsContainer = document.getElementById('review-tab-buttons');
+  if (tabButtonsContainer) {
+    tabButtonsContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('.thinkreview-tab-btn');
+      if (!btn || btn.classList.contains('gl-hidden')) return;
+      const tab = btn.getAttribute('data-tab');
+      if (!tab) return;
+      const panel = document.getElementById('tab-panel-' + tab.replace(/_/g, '-'));
+      if (!panel) return;
+      tabButtonsContainer.querySelectorAll('.thinkreview-tab-btn').forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('.thinkreview-tab-panel').forEach((p) => p.classList.remove('active'));
+      btn.classList.add('active');
+      panel.classList.add('active');
+
+      if (tab === 'code-suggestions') {
+        (async () => {
+          try {
+            const analyticsModule = await import(chrome.runtime.getURL('utils/analytics-service.js'));
+            analyticsModule.trackUserAction('code_suggestions_tab_clicked', {
+              context: 'integrated_panel',
+              location: 'tab_switch'
+            }).catch(() => {});
+          } catch (_) {}
+        })();
+      }
+    });
+  }
+
   // Add event listener for the refresh button
   const refreshButton = document.getElementById('refresh-review-btn');
   if (refreshButton) {
@@ -529,6 +579,9 @@ async function createIntegratedReviewPanel(patchUrl) {
       const reviewContent = document.getElementById('review-content');
       const reviewError = document.getElementById('review-error');
       
+      // Clear previous review data so Copy All can't use stale content
+      currentReviewData = null;
+
       // Show loading indicator
       reviewLoading.classList.remove('gl-hidden');
       reviewContent.classList.add('gl-hidden');
@@ -629,6 +682,9 @@ async function createIntegratedReviewPanel(patchUrl) {
       const reviewContent = document.getElementById('review-content');
       const reviewError = document.getElementById('review-error');
       
+      // Clear previous review data so Copy All can't use stale content
+      currentReviewData = null;
+
       if (reviewLoading) reviewLoading.classList.remove('gl-hidden');
       if (reviewContent) reviewContent.classList.add('gl-hidden');
       if (reviewError) reviewError.classList.add('gl-hidden');
@@ -650,11 +706,13 @@ async function createIntegratedReviewPanel(patchUrl) {
   const headerActions = container.querySelector('.thinkreview-header-actions');
   if (headerActions) {
     const blockEvent = (e) => {
-      // Allow clicks on bug report button, regenerate button, and language selector
-      if (e.target.id === 'bug-report-btn' || 
+      // Allow clicks on bug report button, regenerate button, copy-all button, and language selector
+      if (e.target.id === 'bug-report-btn' ||
           e.target.closest('#bug-report-btn') ||
-          e.target.id === 'regenerate-review-btn' || 
+          e.target.id === 'regenerate-review-btn' ||
           e.target.closest('#regenerate-review-btn') ||
+          e.target.id === 'copy-all-review-btn' ||
+          e.target.closest('#copy-all-review-btn') ||
           e.target.id === 'language-selector' ||
           e.target.closest('#language-selector')) {
         return; // Don't block these events
@@ -1175,10 +1233,25 @@ function submitFeedback(email, feedbackType, aiResponse, mrUrl, rating, addition
 }
 
 /**
+ * Switch to Review tab (where conversation is displayed)
+ */
+function switchToReviewTab() {
+  const reviewTabBtn = document.querySelector('.thinkreview-tab-btn[data-tab="review"]');
+  const reviewPanel = document.getElementById('tab-panel-review');
+  if (reviewTabBtn && reviewPanel) {
+    document.querySelectorAll('.thinkreview-tab-btn').forEach((b) => b.classList.remove('active'));
+    document.querySelectorAll('.thinkreview-tab-panel').forEach((p) => p.classList.remove('active'));
+    reviewTabBtn.classList.add('active');
+    reviewPanel.classList.add('active');
+  }
+}
+
+/**
  * Handles sending a user message.
  * @param {string} messageText - The text of the user's message.
  */
 async function handleSendMessage(messageText) {
+  switchToReviewTab();
   appendToChatLog('user', messageText);
   conversationHistory.push({ role: 'user', content: messageText });
 
@@ -1288,11 +1361,14 @@ async function handleSendMessage(messageText) {
 }
 
 async function displayIntegratedReview(review, patchContent, patchSize = null, subscriptionType = null, modelUsed = null, isCached = false, provider = null, ollamaMeta = null) {
+  // Store review data for copy-all functionality
+  currentReviewData = review;
+
   // Ensure copy button utils are loaded
   if (!attachCopyButtonToItem) {
     await initCopyButtonUtils();
   }
-  
+
   // Check if there was a JSON parsing error (safety check)
   if (review.parsingError === true) {
     dbgWarn('JSON parsing error detected in review object');
@@ -1336,9 +1412,13 @@ async function displayIntegratedReview(review, patchContent, patchSize = null, s
   reviewContent.classList.remove('gl-hidden');
 
   // Update subscription type in header (Free, Lite, Premium, Teams)
+  // Always read from storage (getUserSubscriptionDataThinkReview) - stored by background via REFRESH_USER_DATA_STORAGE / GET_USER_DATA_WITH_SUBSCRIPTION
+  const storage = await chrome.storage.local.get(['userSubscriptionData']);
+  const subscriptionTypeForDisplay = storage.userSubscriptionData?.userSubscriptionType || 'Free';
+
   const subscriptionLabel = document.getElementById('review-subscription-label');
   if (subscriptionLabel) {
-    const raw = (subscriptionType ?? '').toString().trim().toLowerCase();
+    const raw = (subscriptionTypeForDisplay ?? '').toString().trim().toLowerCase();
     let displayName = 'Free';
     if (raw && !raw.includes('free')) {
       if (raw === 'lite') displayName = 'Lite';
@@ -1348,6 +1428,39 @@ async function displayIntegratedReview(review, patchContent, patchSize = null, s
     subscriptionLabel.textContent = displayName;
     const slug = displayName.toLowerCase();
     subscriptionLabel.className = 'thinkreview-header-subscription thinkreview-header-subscription-' + slug;
+  }
+
+  // Render patch size / metadata banner (Ollama-specific bar vs cloud bar)
+  if (patchSizeBanner) {
+    try {
+      const metadataModule = await import('./review-metadata-bar.js');
+      if (provider === 'ollama' && ollamaMeta) {
+        metadataModule.renderOllamaMetadataBar(patchSizeBanner, ollamaMeta, {
+          onSwitchToCloud() {
+            document.dispatchEvent(new CustomEvent('thinkreview-switch-to-cloud'));
+          },
+          getModels() {
+            return new Promise((resolve) => {
+              chrome.runtime.sendMessage({ type: 'GET_OLLAMA_MODELS' }, (response) => {
+                if (chrome.runtime.lastError || !response) {
+                  resolve([]);
+                  return;
+                }
+                resolve(response.models || []);
+              });
+            });
+          },
+          onModelChange(modelName) {
+            document.dispatchEvent(new CustomEvent('thinkreview-ollama-model-changed', { detail: { model: modelName } }));
+          }
+        });
+      } else {
+        metadataModule.renderReviewMetadataBar(patchSizeBanner, patchSize, subscriptionTypeForDisplay, modelUsed, isCached);
+      }
+    } catch (error) {
+      dbgWarn('Failed to load review metadata bar:', error);
+      patchSizeBanner.classList.add('gl-hidden');
+    }
   }
 
   // Render quality scorecard if metrics are available
@@ -1396,6 +1509,67 @@ async function displayIntegratedReview(review, patchContent, patchSize = null, s
     } else {
       reviewMetricsContainer.classList.add('gl-hidden');
     }
+  }
+
+  // Setup copy-all review button in the quality scorecard header (rendered above)
+  const copyAllButton = document.getElementById('copy-all-review-btn');
+  if (copyAllButton && !copyAllButton.dataset.copyBound) {
+    copyAllButton.dataset.copyBound = '1';
+    copyAllButton.addEventListener('click', async (e) => {
+      e.stopPropagation();
+
+      if (!currentReviewData) return;
+
+      let markdown = '';
+      try {
+        const module = await import('./utils/review-markdown.js');
+        markdown = module.buildReviewMarkdown(currentReviewData);
+      } catch (error) {
+        dbgWarn('Failed to load review markdown utils:', error);
+        return;
+      }
+      if (!markdown.trim()) return;
+
+      try {
+        await navigator.clipboard.writeText(markdown);
+
+        // Show success feedback (green checkmark)
+        const originalHTML = copyAllButton.innerHTML;
+        copyAllButton.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="currentColor"/>
+          </svg>
+        `;
+        copyAllButton.style.color = '#4ade80';
+        setTimeout(() => {
+          copyAllButton.innerHTML = originalHTML;
+          copyAllButton.style.color = '';
+        }, 2000);
+
+        // Track copy-all action
+        try {
+          const analyticsModule = await import(chrome.runtime.getURL('utils/analytics-service.js'));
+          analyticsModule.trackUserAction('copy_all_review', {
+            context: 'integrated_review_panel'
+          }).catch(() => {});
+        } catch (error) { /* silent */ }
+      } catch (error) {
+        dbgWarn('Failed to copy all review content:', error);
+
+        // Show error feedback
+        const originalHTML = copyAllButton.innerHTML;
+        copyAllButton.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/>
+          </svg>
+        `;
+        copyAllButton.style.color = '#ef4444';
+        setTimeout(() => {
+          copyAllButton.innerHTML = originalHTML;
+          copyAllButton.style.color = '';
+        }, 2000);
+      }
+    });
   }
 
   // Show score popup and notification indicator on AI Review button if panel is minimized
@@ -1583,25 +1757,6 @@ async function displayIntegratedReview(review, patchContent, patchSize = null, s
     buttonContent.textContent = shortDisplayText;
     
     staticQuestionButton.appendChild(buttonContent);
-    
-    // Create "New Prompt" badge using the reusable module
-    // Always await the cached promise to ensure deterministic badge creation
-    (async () => {
-      try {
-        // Always await the promise to ensure the module is loaded before accessing createNewBadge
-        const module = await badgeModulePromise;
-        const badgeCreator = module?.createNewBadge || createNewBadge;
-        
-        // Create and append badge if module loaded successfully
-        if (badgeCreator && !staticQuestionButton.querySelector('.thinkreview-new-badge')) {
-          const newBadge = badgeCreator('New Prompt');
-          staticQuestionButton.appendChild(newBadge);
-        }
-      } catch (error) {
-        dbgWarn('Failed to load badge module for button:', error);
-      }
-    })();
-    
     suggestedQuestionsContainer.appendChild(staticQuestionButton);
     
     // Add AI-generated questions (limit to maximum of 3)
@@ -1788,6 +1943,34 @@ async function displayIntegratedReview(review, patchContent, patchSize = null, s
       }
     }
   }, 1000);
+
+  // Handle code suggestions tab (modularized)
+  try {
+    const codeSuggestionsModule = await import('./code-suggestions-tab.js');
+    await codeSuggestionsModule.updateCodeSuggestionsTab({
+      review,
+      patchContent,
+      subscriptionType: subscriptionTypeForDisplay,
+      logger: { dbgLog, dbgWarn },
+      onExplainSuggestion: (suggestion) => {
+        // Build explain message with suggestion context (handleSendMessage switches to Review tab)
+        const parts = ['Can you explain this code suggestion?'];
+        if (suggestion.description) parts.push(suggestion.description);
+        if (suggestion.filePath) {
+          const range = typeof suggestion.startLine === 'number'
+            ? ` lines ${suggestion.startLine}${suggestion.endLine && suggestion.endLine !== suggestion.startLine ? '–' + suggestion.endLine : ''}`
+            : '';
+          parts.push(`File: ${suggestion.filePath}${range}.`);
+        }
+        if (suggestion.suggestedCode) {
+          parts.push('Suggested code:', '```', suggestion.suggestedCode, '```');
+        }
+        handleSendMessage(parts.join('\n'));
+      }
+    });
+  } catch (error) {
+    dbgWarn('Failed to update code suggestions tab:', error);
+  }
 }
 
 /**
