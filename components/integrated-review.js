@@ -1397,6 +1397,12 @@ async function displayIntegratedReview(review, patchContent, patchSize = null, s
   const tokenError = document.getElementById('review-azure-token-error');
   const loginPrompt = document.getElementById('review-login-prompt');
 
+  if (!reviewLoading || !reviewContent || !reviewError) {
+    dbgWarn('Review panel elements not found (panel may have been closed or navigated away)');
+    showPanelRecoveryMessage();
+    return;
+  }
+
   // Static review elements
   const reviewSummary = document.getElementById('review-summary');
   const reviewSuggestions = document.getElementById('review-suggestions');
@@ -1974,6 +1980,33 @@ async function displayIntegratedReview(review, patchContent, patchSize = null, s
 }
 
 /**
+ * Shows a friendly recovery message when the review panel DOM is missing (e.g. user navigated away).
+ * Injects a small banner into the page with refresh + bug-report guidance.
+ */
+function showPanelRecoveryMessage() {
+  if (document.getElementById('thinkreview-panel-recovery-msg')) return;
+  const wrap = document.createElement('div');
+  wrap.id = 'thinkreview-panel-recovery-msg';
+  wrap.setAttribute('style',
+    'position:fixed;top:16px;right:16px;max-width:360px;z-index:2147483647;' +
+    'background:#1f2937;color:#f3f4f6;border-radius:8px;padding:14px 16px;' +
+    'box-shadow:0 4px 12px rgba(0,0,0,0.25);font-family:system-ui,-apple-system,sans-serif;font-size:13px;line-height:1.45;'
+  );
+  wrap.innerHTML =
+    '<div style="margin-bottom:8px;font-weight:600;">ThinkReview</div>' +
+    '<p style="margin:0 0 10px;">Something went wrong with the review panel. Please refresh the page and try again.</p>' +
+    '<p style="margin:0 0 10px;">If this keeps happening, please <a href="https://thinkreview.dev/bug-report" target="_blank" rel="noopener" style="color:#60a5fa;text-decoration:underline;">report a bug</a>.</p>' +
+    '<button type="button" style="background:#374151;color:#e5e7eb;border:none;border-radius:4px;padding:6px 12px;font-size:12px;cursor:pointer;">Dismiss</button>';
+  document.body.appendChild(wrap);
+  const btn = wrap.querySelector('button');
+  const remove = () => {
+    if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+  };
+  btn.addEventListener('click', remove);
+  setTimeout(remove, 12000);
+}
+
+/**
  * Shows an error message in the integrated review panel
  * @param {string} message - The error message to display
  */
@@ -1997,6 +2030,12 @@ function showIntegratedReviewError(message) {
   const tokenError = document.getElementById('review-azure-token-error');
   const bitbucketTokenError = document.getElementById('review-bitbucket-token-error');
   const loginPrompt = document.getElementById('review-login-prompt');
+
+  if (!reviewLoading || !reviewContent || !reviewError || !reviewErrorMessage) {
+    dbgWarn('Review panel elements not found (panel may have been closed or navigated away)');
+    showPanelRecoveryMessage();
+    return;
+  }
   
   // Hide loading indicator and content
   reviewLoading.classList.add('gl-hidden');
