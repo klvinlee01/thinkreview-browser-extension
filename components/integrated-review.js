@@ -1436,39 +1436,6 @@ async function displayIntegratedReview(review, patchContent, patchSize = null, s
     subscriptionLabel.className = 'thinkreview-header-subscription thinkreview-header-subscription-' + slug;
   }
 
-  // Render patch size / metadata banner (Ollama-specific bar vs cloud bar)
-  if (patchSizeBanner) {
-    try {
-      const metadataModule = await import('./review-metadata-bar.js');
-      if (provider === 'ollama' && ollamaMeta) {
-        metadataModule.renderOllamaMetadataBar(patchSizeBanner, ollamaMeta, {
-          onSwitchToCloud() {
-            document.dispatchEvent(new CustomEvent('thinkreview-switch-to-cloud'));
-          },
-          getModels() {
-            return new Promise((resolve) => {
-              chrome.runtime.sendMessage({ type: 'GET_OLLAMA_MODELS' }, (response) => {
-                if (chrome.runtime.lastError || !response) {
-                  resolve([]);
-                  return;
-                }
-                resolve(response.models || []);
-              });
-            });
-          },
-          onModelChange(modelName) {
-            document.dispatchEvent(new CustomEvent('thinkreview-ollama-model-changed', { detail: { model: modelName } }));
-          }
-        });
-      } else {
-        metadataModule.renderReviewMetadataBar(patchSizeBanner, patchSize, subscriptionTypeForDisplay, modelUsed, isCached);
-      }
-    } catch (error) {
-      dbgWarn('Failed to load review metadata bar:', error);
-      patchSizeBanner.classList.add('gl-hidden');
-    }
-  }
-
   // Render quality scorecard if metrics are available
   if (reviewMetricsContainer) {
     // Clean up previous scorecard event listeners before clearing
