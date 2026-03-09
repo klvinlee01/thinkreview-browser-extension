@@ -20,7 +20,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     dbgLog('Received review count update:', message.count);
     updateReviewCount(message.count);
   }
-  
+
   // Handle webapp auth sync - refresh popup when webapp login is detected
   if (message.type === 'WEBAPP_AUTH_SYNCED') {
     dbgLog('Received webapp auth sync notification, refreshing popup');
@@ -40,12 +40,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 function showLoadingState() {
   const authenticatedContent = document.getElementById('authenticated-content');
   const statusDiv = document.getElementById('current-status');
-  
+
   if (authenticatedContent) {
     authenticatedContent.style.display = 'block';
     authenticatedContent.classList.add('loading');
   }
-  
+
   if (statusDiv) {
     statusDiv.textContent = 'Loading...';
     statusDiv.className = 'loading';
@@ -56,12 +56,12 @@ function showLoadingState() {
 function showErrorState(message) {
   const authenticatedContent = document.getElementById('authenticated-content');
   const statusDiv = document.getElementById('current-status');
-  
+
   if (authenticatedContent) {
     authenticatedContent.style.display = 'block';
     authenticatedContent.classList.remove('loading');
   }
-  
+
   if (statusDiv) {
     statusDiv.textContent = message || 'An error occurred';
     statusDiv.className = 'error';
@@ -72,12 +72,12 @@ function showErrorState(message) {
 function showSuccessState(message) {
   const authenticatedContent = document.getElementById('authenticated-content');
   const statusDiv = document.getElementById('current-status');
-  
+
   if (authenticatedContent) {
     authenticatedContent.style.display = 'block';
     authenticatedContent.classList.remove('loading');
   }
-  
+
   if (statusDiv) {
     statusDiv.textContent = message || 'Success';
     statusDiv.className = 'success';
@@ -119,7 +119,7 @@ async function forceRefreshUserData() {
 // Uses consolidated fields: subscriptionType (Professional, Teams, or Free) and currentPlanValidTo
 async function updateSubscriptionStatus(subscriptionType, currentPlanValidTo, cancellationRequested, stripeCanceledDate, initialTrialEndDate = null) {
   await subscriptionStatus.updateStatus(subscriptionType, currentPlanValidTo, cancellationRequested, stripeCanceledDate, initialTrialEndDate);
-  
+
   // Always show Manage Subscription button so users can upgrade or manage regardless of plan
   const cancelContainer = document.getElementById('cancel-subscription-container');
   if (cancelContainer) {
@@ -136,10 +136,10 @@ function isUserLoggedIn() {
         resolve(false);
         return;
       }
-      
+
       // Debug: Log the user data to see what fields are available
       dbgLog('User data from storage:', result);
-      
+
       // Check both user and userData fields for backward compatibility
       // Supports both extension OAuth and webapp Firebase auth
       if (result.userData && result.userData.email) {
@@ -165,25 +165,25 @@ function isUserLoggedIn() {
 // Function to fetch and display review count with retry logic
 async function fetchAndDisplayUserData(retryCount = 0) {
   const maxRetries = 3;
-  
+
   try {
     // Check if CloudService is available
     if (!window.CloudService) {
       if (retryCount < maxRetries) {
         // Use exponential backoff for retries (1s, 2s, 4s)
         const backoffTime = Math.pow(2, retryCount) * 500;
-        dbgLog(`CloudService not available, retrying in ${backoffTime/1000}s (attempt ${retryCount + 1}/${maxRetries})`);
+        dbgLog(`CloudService not available, retrying in ${backoffTime / 1000}s (attempt ${retryCount + 1}/${maxRetries})`);
         setTimeout(() => fetchAndDisplayUserData(retryCount + 1), backoffTime);
         return;
       } else {
         dbgWarn('CloudService not available after retries');
-              showErrorState('Unable to load user data');
-      updateReviewCount('error');
-      await updateSubscriptionStatus('Free', null, false, null);
+        showErrorState('Unable to load user data');
+        updateReviewCount('error');
+        await updateSubscriptionStatus('Free', null, false, null);
         return;
       }
     }
-    
+
     // Double-check that CloudService is actually ready
     if (!cloudServiceReady) {
       cloudServiceReady = true; // Mark as ready since we have the service
@@ -197,7 +197,7 @@ async function fetchAndDisplayUserData(retryCount = 0) {
     const initialTrialEndDate = userData.initialTrialEndDate || null;
     await updateSubscriptionStatus(subscriptionType, userData.currentPlanValidTo, cancellationRequested, userData.stripeCanceledDate, initialTrialEndDate);
     dbgLog('User data updated:', userData);
-    
+
     // Show success state if we got valid data
     if (userData.reviewCount !== null && userData.reviewCount !== undefined) {
       // showSuccessState('User data loaded successfully');
@@ -207,7 +207,7 @@ async function fetchAndDisplayUserData(retryCount = 0) {
     if (retryCount < maxRetries) {
       // Use exponential backoff for retries (1s, 2s, 4s)
       const backoffTime = Math.pow(2, retryCount) * 500;
-      dbgLog(`Retrying user data fetch in ${backoffTime/1000}s (attempt ${retryCount + 1}/${maxRetries})`);
+      dbgLog(`Retrying user data fetch in ${backoffTime / 1000}s (attempt ${retryCount + 1}/${maxRetries})`);
       setTimeout(() => fetchAndDisplayUserData(retryCount + 1), backoffTime);
     } else {
       showErrorState('Failed to load user data');
@@ -221,15 +221,15 @@ async function fetchAndDisplayUserData(retryCount = 0) {
 async function updateUIForLoginStatus() {
   try {
     showLoadingState();
-    
+
     const isLoggedIn = await isUserLoggedIn();
     const authenticatedContent = document.getElementById('authenticated-content');
     const welcomeContent = document.getElementById('welcome-content');
     const loginPrompt = document.getElementById('login-prompt');
     const privacyPolicyText = document.getElementById('privacy-policy-text');
-    
+
     dbgLog('updateUIForLoginStatus - isLoggedIn:', isLoggedIn, 'cloudServiceReady:', cloudServiceReady, 'CloudService available:', !!window.CloudService);
-    
+
     if (isLoggedIn) {
       // User is logged in - show authenticated content, hide welcome, login prompt and privacy policy
       if (authenticatedContent) {
@@ -250,7 +250,7 @@ async function updateUIForLoginStatus() {
       if (portalButtonsRow) {
         portalButtonsRow.style.display = 'flex';
       }
-      
+
       // Fetch review count if CloudService is ready
       if (cloudServiceReady && window.CloudService) {
         dbgLog('CloudService ready, fetching review count immediately');
@@ -297,7 +297,7 @@ async function updateUIForLoginStatus() {
 function updateCurrentStatus() {
   const statusDiv = document.getElementById('current-status');
   if (!statusDiv) return;
-  
+
   // Just show a generic ready message - content script handles actual detection
   statusDiv.textContent = 'Ready to generate reviews';
   statusDiv.className = 'success';
@@ -306,16 +306,16 @@ function updateCurrentStatus() {
 // Initialize popup
 async function initializePopup() {
   if (isInitialized) return;
-  
+
   try {
     dbgLog('Initializing popup...');
-    
+
     // Update UI based on login status
     await updateUIForLoginStatus();
-    
+
     // Update current status
     updateCurrentStatus();
-    
+
     // Check if CloudService is already ready and we have a pending fetch
     if (cloudServiceReady && window.CloudService && pendingUserDataFetch) {
       dbgLog('CloudService already ready during initialization, processing pending fetch');
@@ -323,7 +323,7 @@ async function initializePopup() {
       await fetchAndDisplayUserData();
       showSuccessState('Ready to generate AI reviews - Navigate to a PR/MR page to start generating reviews');
     }
-    
+
     isInitialized = true;
     dbgLog('Popup initialized successfully');
   } catch (error) {
@@ -338,32 +338,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     cloudServiceReady = true;
     dbgLog('CloudService already available on popup load');
   }
-  
+
   // Initialize popup
   await initializePopup();
-  
+
   // Trigger immediate CloudService data fetch when popup opens
   await forceRefreshUserData();
-  
+
   // Also trigger after a small delay as backup
   setTimeout(async () => {
     await forceRefreshUserData();
   }, 200); // Small delay to ensure everything is loaded
-  
+
   // Set up domain settings
   initializeDomainSettings();
-  
+
   // Set up auto-start review option
   initializeAutoStartReviewSettings();
-  
+
   // Set up Azure DevOps settings
   initializeAzureSettings();
-  
+
   // Check if we should auto-trigger sign-in (from content script)
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('autoSignIn') === 'true') {
     dbgLog('Auto sign-in requested, triggering Google Sign-In');
-    
+
     // Wait a bit for the google-signin component to be ready
     setTimeout(() => {
       const googleSignInElement = document.querySelector('google-signin');
@@ -390,31 +390,31 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }, 500); // Wait for component to be fully loaded
   }
-  
+
   // Subscription component will be initialized when it's loaded
-  
-  
+
+
   // Listen for popup visibility changes (when popup is reopened)
   document.addEventListener('visibilitychange', async () => {
     if (!document.hidden && isInitialized) {
       dbgLog('Popup became visible, checking if review count needs refresh');
-      
+
       // Force check CloudService availability
       if (window.CloudService && !cloudServiceReady) {
         cloudServiceReady = true;
         dbgLog('CloudService detected on visibility change');
       }
-      
+
       // Add a small delay to ensure everything is loaded
       setTimeout(async () => {
         const isLoggedIn = await isUserLoggedIn();
-        
+
         // Double check CloudService again after the delay
         if (window.CloudService && !cloudServiceReady) {
           cloudServiceReady = true;
           dbgLog('CloudService detected after delay on visibility change');
         }
-        
+
         if (isLoggedIn) {
           // Force refresh user data when popup is reopened
           dbgLog('Popup reopened - force refreshing user data');
@@ -423,27 +423,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       }, 100);
     }
   });
-  
+
   // Listen for sign-in state changes with improved event handling
   // Note: After successful sign-in, the page will reload, so this mainly handles sign-out
   document.addEventListener('signInStateChanged', async (event) => {
     dbgLog('Sign-in state changed:', event.detail);
-    
+
     // Handle both camelCase and snake_case event details
     const isSignedIn = event.detail.signed_in || event.detail.signedIn;
-    
+
     if (isSignedIn) {
       // User signed in - page will reload automatically after sign-in
       // This code path is for any edge cases where reload doesn't happen
       dbgLog('User signed in, refreshing UI');
       await updateUIForLoginStatus();
-      
+
       // Show portal buttons row when signed in
       const portalButtonsRow = document.getElementById('portal-buttons-row');
       if (portalButtonsRow) {
         portalButtonsRow.style.display = 'flex';
       }
-      
+
       // If CloudService is already ready, fetch review count immediately
       if (cloudServiceReady && window.CloudService) {
         dbgLog('CloudService ready, fetching review count immediately after sign-in');
@@ -483,28 +483,28 @@ document.addEventListener('DOMContentLoaded', async () => {
       pendingUserDataFetch = false; // Clear pending fetch
     }
   });
-  
+
   // Listen for sign-in errors
   document.addEventListener('signin-error', (event) => {
     dbgWarn('Sign-in error:', event.detail);
     showErrorState('Sign-in failed. Please try again.');
   });
-  
+
   // Listen for sign-out errors
   document.addEventListener('signout-error', (event) => {
     dbgWarn('Sign-out error:', event.detail);
     showErrorState('Sign-out failed. Please try again.');
   });
-  
+
   // Listen for CloudService ready event
   window.addEventListener('cloud-service-ready', async (event) => {
     dbgLog('CloudService ready event received');
     cloudServiceReady = true;
-    
+
     // Check if user is logged in and fetch review count
     const isLoggedIn = await isUserLoggedIn();
     dbgLog('CloudService ready - isLoggedIn:', isLoggedIn, 'pendingUserDataFetch:', pendingUserDataFetch);
-    
+
     if (isLoggedIn) {
       // If we have a pending review count fetch, handle it now
       if (pendingUserDataFetch) {
@@ -519,65 +519,65 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
   });
-  
+
   // Listen for module loading errors
   window.addEventListener('modules-error', (event) => {
     dbgWarn('Module loading error:', event.detail);
     showErrorState('Failed to load extension modules');
   });
-  
+
   // Set up the portal buttons
   const dashboardBtn = document.getElementById('dashboard-btn');
   if (dashboardBtn) {
     dashboardBtn.addEventListener('click', async () => {
       try {
         const { trackUserAction } = await import('./utils/analytics-service.js');
-        trackUserAction('dashboard_opened', { context: 'popup' }).catch(() => {});
+        trackUserAction('dashboard_opened', { context: 'popup' }).catch(() => { });
       } catch (e) { /* silent */ }
       chrome.tabs.create({ url: 'https://portal.thinkreview.dev/dashboard' });
     });
   }
-  
+
   const analyticsBtn = document.getElementById('analytics-btn');
   if (analyticsBtn) {
     analyticsBtn.addEventListener('click', async () => {
       try {
         const { trackUserAction } = await import('./utils/analytics-service.js');
-        trackUserAction('analytics_opened', { context: 'popup' }).catch(() => {});
+        trackUserAction('analytics_opened', { context: 'popup' }).catch(() => { });
       } catch (e) { /* silent */ }
       chrome.tabs.create({ url: 'https://portal.thinkreview.dev/analytics' });
     });
   }
-  
+
   const modelSelectionBtn = document.getElementById('model-selection-btn');
   if (modelSelectionBtn) {
     modelSelectionBtn.addEventListener('click', async () => {
       try {
         const { trackUserAction } = await import('./utils/analytics-service.js');
-        trackUserAction('model_selection_opened', { context: 'popup' }).catch(() => {});
+        trackUserAction('model_selection_opened', { context: 'popup' }).catch(() => { });
       } catch (e) { /* silent */ }
       chrome.tabs.create({ url: 'https://portal.thinkreview.dev/model-selection' });
     });
   }
-  
+
   const scoringMetricsBtn = document.getElementById('scoring-metrics-btn');
   if (scoringMetricsBtn) {
     scoringMetricsBtn.addEventListener('click', async () => {
       try {
         const { trackUserAction } = await import('./utils/analytics-service.js');
-        trackUserAction('scoring_metrics_opened', { context: 'popup' }).catch(() => {});
+        trackUserAction('scoring_metrics_opened', { context: 'popup' }).catch(() => { });
       } catch (e) { /* silent */ }
       chrome.tabs.create({ url: 'https://portal.thinkreview.dev/scoring-metrics' });
     });
   }
-  
+
   // Set up the signout button in portal buttons row
   const signoutBtn = document.getElementById('signout-btn');
   if (signoutBtn) {
     signoutBtn.addEventListener('click', async () => {
       try {
         const { trackUserAction } = await import('./utils/analytics-service.js');
-        trackUserAction('signout_clicked', { context: 'popup' }).catch(() => {});
+        trackUserAction('signout_clicked', { context: 'popup' }).catch(() => { });
       } catch (e) { /* silent */ }
       // Find the google-signin component and trigger its signout
       const googleSignIn = document.querySelector('google-signin');
@@ -589,39 +589,39 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
   }
-  
+
   // Set up the Documentation button
   const howItWorksBtn = document.getElementById('how-it-works-btn');
   if (howItWorksBtn) {
     howItWorksBtn.addEventListener('click', async () => {
       try {
         const { trackUserAction } = await import('./utils/analytics-service.js');
-        trackUserAction('documentation_opened', { context: 'popup' }).catch(() => {});
+        trackUserAction('documentation_opened', { context: 'popup' }).catch(() => { });
       } catch (e) { /* silent */ }
       chrome.tabs.create({ url: 'https://thinkreview.dev/docs' });
     });
   }
-  
+
   // Set up the Need Help button
   const needHelpBtn = document.getElementById('need-help-btn');
   if (needHelpBtn) {
     needHelpBtn.addEventListener('click', async () => {
       try {
         const { trackUserAction } = await import('./utils/analytics-service.js');
-        trackUserAction('need_help_clicked', { context: 'popup' }).catch(() => {});
+        trackUserAction('need_help_clicked', { context: 'popup' }).catch(() => { });
       } catch (e) { /* silent */ }
       // Open the contact page in a new tab
       chrome.tabs.create({ url: 'https://thinkreview.dev/contact' });
     });
   }
-  
+
   // Set up the Report a Bug button
   const reportBugBtn = document.getElementById('report-bug-btn');
   if (reportBugBtn) {
     reportBugBtn.addEventListener('click', async () => {
       try {
         const { trackUserAction } = await import('./utils/analytics-service.js');
-        trackUserAction('bug_report_opened', { context: 'popup' }).catch(() => {});
+        trackUserAction('bug_report_opened', { context: 'popup' }).catch(() => { });
       } catch (e) { /* silent */ }
       // Open the bug report page in a new tab
       chrome.tabs.create({ url: 'https://thinkreview.dev/bug-report' });
@@ -634,7 +634,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       chrome.tabs.create({ url: 'https://thinkreview.dev/privacy-faqs.html' });
     });
   }
-  
+
   // Set up the Manage Subscription button
   const cancelSubscriptionBtn = document.getElementById('cancel-subscription-btn');
   if (cancelSubscriptionBtn) {
@@ -643,16 +643,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       chrome.tabs.create({ url: 'https://portal.thinkreview.dev/subscription' });
     });
   }
-  
+
   // Initialize domain settings
   initializeDomainSettings();
-  
+
   // Initialize Azure DevOps domain settings
   initializeAzureDevOpsDomainSettings();
-  
+
   // Initialize Bitbucket settings (also called above after Azure)
   initializeBitbucketSettings();
-  
+
   // Initialize AI Provider settings
   initializeAIProviderSettings();
 });
@@ -726,17 +726,17 @@ function initializeDomainSettings() {
 function setupDomainEventListeners() {
   const addButton = document.getElementById('add-domain-btn');
   const domainInput = document.getElementById('domain-input');
-  
+
   // Add domain button click
   addButton.addEventListener('click', addDomain);
-  
+
   // Enter key in input field
   domainInput.addEventListener('keypress', (event) => {
     if (event.key === 'Enter') {
       addDomain();
     }
   });
-  
+
   // Input validation
   domainInput.addEventListener('input', () => {
     const isValid = validateDomainInput(domainInput.value.trim());
@@ -746,7 +746,7 @@ function setupDomainEventListeners() {
 
 function validateDomainInput(domain) {
   if (!domain) return false;
-  
+
   // Allow domains with or without protocol and port
   // Examples: gitlab.com, localhost:8083, http://localhost:8083, https://gitlab.example.com
   const domainRegex = /^(https?:\/\/)?(([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}|localhost)(:\d+)?(\/.*)?$/;
@@ -756,17 +756,17 @@ function validateDomainInput(domain) {
 function normalizeDomain(input) {
   // Remove trailing slashes
   let normalized = input.replace(/\/+$/, '');
-  
+
   // If it starts with http:// or https://, keep as is
   if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
     return normalized;
   }
-  
+
   // For localhost or domains with ports, default to http://
   if (normalized.includes('localhost') || /:\d+/.test(normalized)) {
     return `http://${normalized}`;
   }
-  
+
   // For regular domains, default to https://
   return `https://${normalized}`;
 }
@@ -792,12 +792,12 @@ async function loadDomains() {
 
 function renderDomainList(domains) {
   const domainList = document.getElementById('domain-list');
-  
+
   if (domains.length === 0) {
     domainList.innerHTML = '<div class="no-domains">No custom domains added</div>';
     return;
   }
-  
+
   domainList.innerHTML = domains.map(domain => {
     const isDefault = DEFAULT_DOMAINS.includes(domain);
     const displayDomain = formatDomainForDisplay(domain);
@@ -811,7 +811,7 @@ function renderDomainList(domains) {
       </div>
     `;
   }).join('');
-  
+
   // Add event listeners to remove buttons
   domainList.querySelectorAll('.remove-domain-btn').forEach(button => {
     button.addEventListener('click', () => removeDomain(button.dataset.domain));
@@ -826,39 +826,39 @@ async function addDomain() {
   if (isAddingDomain) {
     return;
   }
-  
+
   const domainInput = document.getElementById('domain-input');
   const inputValue = domainInput.value.trim().toLowerCase();
-  
+
   if (!validateDomainInput(inputValue)) {
     alert('Please enter a valid domain (e.g., gitlab.example.com, localhost:8083, http://localhost:8083)');
     return;
   }
-  
+
   // Normalize the domain (store as full URL format for consistency)
   const domain = normalizeDomain(inputValue);
-  
+
   try {
     // Set flag to prevent duplicate calls
     isAddingDomain = true;
-    
+
     // Show loading state
     const addButton = document.getElementById('add-domain-btn');
     const originalButtonText = addButton.textContent;
     addButton.textContent = 'Adding...';
     addButton.disabled = true;
-    
+
     // Get current domains
     const result = await chrome.storage.local.get(['gitlabDomains']);
     const domains = result.gitlabDomains || DEFAULT_DOMAINS;
-    
+
     if (domains.includes(domain)) {
       alert('Domain already exists');
       addButton.textContent = originalButtonText;
       addButton.disabled = false;
       return;
     }
-    
+
     // Create origin pattern for permission request
     let originPattern;
     if (domain.startsWith('http://') || domain.startsWith('https://')) {
@@ -867,25 +867,25 @@ async function addDomain() {
     } else {
       originPattern = `https://${domain}/*`;
     }
-    
+
     dbgLog(`Adding domain with pattern: ${originPattern}`);
-    
+
     // Request permission for this domain
     const granted = await chrome.permissions.request({
       origins: [originPattern]
     });
-    
+
     if (!granted) {
       alert('Permission not granted. The extension needs permission to access this domain.');
       addButton.textContent = originalButtonText;
       addButton.disabled = false;
       return;
     }
-    
+
     // Add the domain to storage
     const updatedDomains = [...domains, domain];
     await chrome.storage.local.set({ gitlabDomains: updatedDomains });
-    
+
     // Track custom domain in cloud asynchronously (fire-and-forget)
     // This runs in the background without blocking the domain addition
     isUserLoggedIn().then(isLoggedIn => {
@@ -898,23 +898,23 @@ async function addDomain() {
         dbgLog('User not logged in or CloudService not available, skipping cloud tracking');
       }
     }).catch(err => dbgWarn('Error checking login status for cloud tracking:', err));
-    
+
     // Explicitly trigger content script update via message to background
-    chrome.runtime.sendMessage({ 
+    chrome.runtime.sendMessage({
       type: 'UPDATE_CONTENT_SCRIPTS',
-      domains: updatedDomains 
+      domains: updatedDomains
     });
-    
+
     dbgLog('Domain added successfully:', domain);
     domainInput.value = '';
     addButton.textContent = originalButtonText;
     addButton.disabled = true;
-    
+
     renderDomainList(updatedDomains);
-    
+
     // Show success message
     showMessage('Domain added successfully! You may need to reload GitLab pages for changes to take effect.', 'success');
-    
+
   } catch (error) {
     dbgWarn('Error adding domain:', error);
     alert(`Error adding domain: ${error.message}. Please try again.`);
@@ -931,18 +931,18 @@ async function removeDomain(domain) {
     alert('Cannot remove default domain');
     return;
   }
-  
+
   if (!confirm(`Remove domain "${domain}"?`)) {
     return;
   }
-  
+
   try {
     const result = await chrome.storage.local.get(['gitlabDomains']);
     const domains = result.gitlabDomains || DEFAULT_DOMAINS;
-    
+
     const updatedDomains = domains.filter(d => d !== domain);
     await chrome.storage.local.set({ gitlabDomains: updatedDomains });
-    
+
     // Track custom domain removal in cloud asynchronously (fire-and-forget)
     // This runs in the background without blocking the domain removal
     isUserLoggedIn().then(isLoggedIn => {
@@ -955,12 +955,12 @@ async function removeDomain(domain) {
         dbgLog('User not logged in or CloudService not available, skipping cloud tracking');
       }
     }).catch(err => dbgWarn('Error checking login status for cloud tracking:', err));
-    
+
     dbgLog('Domain removed:', domain);
     renderDomainList(updatedDomains);
-    
+
     showMessage('Domain removed successfully!', 'success');
-    
+
   } catch (error) {
     dbgWarn('Error removing domain:', error);
     alert('Error removing domain. Please try again.');
@@ -1345,9 +1345,9 @@ function showMessage(text, type = 'info') {
     text-align: center;
   `;
   message.textContent = text;
-  
+
   document.body.appendChild(message);
-  
+
   setTimeout(() => {
     if (document.body.contains(message)) {
       document.body.removeChild(message);
@@ -1364,10 +1364,10 @@ function initializeAzureSettings() {
 function setupAzureEventListeners() {
   const saveButton = document.getElementById('save-token-btn');
   const tokenInput = document.getElementById('azure-token-input');
-  
+
   // Save token button click
   saveButton.addEventListener('click', saveAzureToken);
-  
+
   // Enter key in input field
   tokenInput.addEventListener('keypress', (event) => {
     if (event.key === 'Enter') {
@@ -1380,7 +1380,7 @@ async function loadAzureToken() {
   try {
     const result = await chrome.storage.local.get(['azureDevOpsToken']);
     const token = result.azureDevOpsToken;
-    
+
     if (token) {
       clearTokenStatus();
       const tokenInput = document.getElementById('azure-token-input');
@@ -1401,7 +1401,7 @@ async function saveAzureToken() {
   const tokenInput = document.getElementById('azure-token-input');
   const saveButton = document.getElementById('save-token-btn');
   const token = tokenInput.value.trim();
-  
+
   const originalButtonText = saveButton.textContent;
   try {
     saveButton.textContent = 'Saving...';
@@ -1446,10 +1446,10 @@ function clearTokenStatus() {
 // AI Provider Management Functionality
 
 const OPENAI_PROVIDERS = {
-  openai:     { label: 'OpenAI',           url: 'https://api.openai.com',                                    contextLength: 128000  },
-  openrouter: { label: 'OpenRouter',        url: 'https://openrouter.ai/api/v1',                              contextLength: 128000  },
-  google:     { label: 'Google (Gemini)',   url: 'https://generativelanguage.googleapis.com/v1beta/openai',  contextLength: 1000000 },
-  other:      { label: 'Other',             url: '',                                                          contextLength: 128000  }
+  openai: { label: 'OpenAI', url: 'https://api.openai.com', contextLength: 128000 },
+  openrouter: { label: 'OpenRouter', url: 'https://openrouter.ai/api/v1', contextLength: 128000 },
+  google: { label: 'Google (Gemini)', url: 'https://generativelanguage.googleapis.com/v1beta/openai', contextLength: 1000000 },
+  other: { label: 'Other', url: '', contextLength: 128000 }
 };
 
 function initializeAIProviderSettings() {
@@ -1462,22 +1462,22 @@ function setupAIProviderEventListeners() {
   const testButton = document.getElementById('test-ollama-btn');
   const saveButton = document.getElementById('save-ollama-btn');
   const refreshModelsButton = document.getElementById('refresh-models-btn');
-  
+
   // Provider selection change
   providerRadios.forEach(radio => {
     radio.addEventListener('change', handleProviderChange);
   });
-  
+
   // Test Ollama connection
   if (testButton) {
     testButton.addEventListener('click', testOllamaConnection);
   }
-  
+
   // Save Ollama settings
   if (saveButton) {
     saveButton.addEventListener('click', saveOllamaSettings);
   }
-  
+
   // Refresh available models
   if (refreshModelsButton) {
     refreshModelsButton.addEventListener('click', refreshOllamaModels);
@@ -1531,8 +1531,7 @@ async function loadAIProviderSettings() {
       model: 'gpt-4o-mini',
       contextLength: 128000,
       temperature: 0.3,
-      top_p: 0.4,
-      top_k: 90
+      top_p: 0.4
     };
 
     // Set the selected provider
@@ -1587,7 +1586,6 @@ async function loadAIProviderSettings() {
     const openaiContextInput = document.getElementById('openai-context-length');
     const openaiTempInput = document.getElementById('openai-temperature');
     const openaiTopPInput = document.getElementById('openai-top-p');
-    const openaiTopKInput = document.getElementById('openai-top-k');
     const customModelRow = document.getElementById('openai-custom-model-row');
 
     // Set provider dropdown
@@ -1612,7 +1610,6 @@ async function loadAIProviderSettings() {
     if (openaiContextInput) openaiContextInput.value = openaiConfigData.contextLength;
     if (openaiTempInput) openaiTempInput.value = clampTemperature(openaiConfigData.temperature);
     if (openaiTopPInput) openaiTopPInput.value = clampTopP(openaiConfigData.top_p);
-    if (openaiTopKInput) openaiTopKInput.value = clampTopK(openaiConfigData.top_k);
 
     // Populate model dropdown: try to auto-fetch models if API key exists and OpenAI provider is selected
     if (openaiConfigData.apiKey && provider === 'openai') {
@@ -1713,17 +1710,17 @@ async function fetchAndPopulateModels(url, savedModel = null) {
     dbgWarn('No URL provided for fetching models');
     return;
   }
-  
+
   const modelSelect = document.getElementById('ollama-model');
   if (!modelSelect) return;
-  
+
   try {
     // Dynamically import OllamaService
     const { OllamaService } = await import(chrome.runtime.getURL('services/ollama-service.js'));
-    
+
     // Check connection first
     const connectionResult = await OllamaService.checkConnection(url);
-    
+
     if (!connectionResult.connected) {
       if (connectionResult.isCorsError) {
         // Show CORS-specific error with instructions
@@ -1731,25 +1728,25 @@ async function fetchAndPopulateModels(url, savedModel = null) {
         showCorsInstructions();
         return;
       }
-      
+
       modelSelect.innerHTML = '<option value="">⚠️ Ollama not running</option>';
       showOllamaStatus('⚠️ Cannot connect to Ollama. Make sure it\'s running.', 'error');
       return;
     }
-    
+
     // Fetch available models
     const modelsResult = await OllamaService.getAvailableModels(url);
-    
+
     if (modelsResult.isCorsError) {
       // Show CORS-specific error with instructions
       modelSelect.innerHTML = '<option value="">🔒 CORS Error - Fix Required</option>';
       showCorsInstructions();
       return;
     }
-    
+
     if (modelsResult.models.length > 0) {
       updateModelSelect(modelsResult.models);
-      
+
       // If a saved model was provided, try to select it
       if (savedModel) {
         const modelExists = Array.from(modelSelect.options).some(opt => opt.value === savedModel);
@@ -1757,7 +1754,7 @@ async function fetchAndPopulateModels(url, savedModel = null) {
           modelSelect.value = savedModel;
         }
       }
-      
+
       showOllamaStatus(`✅ Found ${modelsResult.models.length} installed model(s)`, 'success');
       dbgLog('Successfully loaded', modelsResult.models.length, 'models from Ollama');
     } else {
@@ -1774,23 +1771,23 @@ async function fetchAndPopulateModels(url, savedModel = null) {
 async function testOllamaConnection() {
   const urlInput = document.getElementById('ollama-url');
   const url = urlInput.value.trim();
-  
+
   if (!url) {
     showOllamaStatus('❌ Please enter a valid URL', 'error');
     return;
   }
-  
+
   showOllamaStatus('🔄 Testing connection...', 'info');
-  
+
   try {
     // Dynamically import OllamaService
     const { OllamaService } = await import(chrome.runtime.getURL('services/ollama-service.js'));
-    
+
     const connectionResult = await OllamaService.checkConnection(url);
-    
+
     if (connectionResult.connected) {
       showOllamaStatus('✅ Connection successful! Ollama is running.', 'success');
-      
+
       // Try to fetch and update models
       try {
         const modelsResult = await OllamaService.getAvailableModels(url);
@@ -1818,20 +1815,20 @@ async function testOllamaConnection() {
 async function saveOllamaSettings() {
   const urlInput = document.getElementById('ollama-url');
   const modelSelect = document.getElementById('ollama-model');
-  
+
   const url = urlInput.value.trim();
   const model = modelSelect.value;
-  
+
   if (!url) {
     showOllamaStatus('❌ Please enter a valid URL', 'error');
     return;
   }
-  
+
   if (!model) {
     showOllamaStatus('❌ Please select a model', 'error');
     return;
   }
-  
+
   const tempInput = document.getElementById('ollama-temperature');
   const topPInput = document.getElementById('ollama-top-p');
   const topKInput = document.getElementById('ollama-top-k');
@@ -1855,7 +1852,7 @@ async function saveOllamaSettings() {
     await chrome.storage.local.set({ ollamaConfig: config });
     dbgLog('Ollama settings saved:', config);
     showOllamaStatus('✅ Settings saved successfully!', 'success');
-    
+
     // Track Ollama configuration in cloud asynchronously (fire-and-forget)
     isUserLoggedIn().then(isLoggedIn => {
       if (isLoggedIn && window.CloudService) {
@@ -1877,23 +1874,23 @@ async function refreshOllamaModels() {
   const urlInput = document.getElementById('ollama-url');
   const refreshButton = document.getElementById('refresh-models-btn');
   const url = urlInput.value.trim();
-  
+
   if (!url) {
     showOllamaStatus('❌ Please enter a valid URL first', 'error');
     return;
   }
-  
+
   // Show loading state
   refreshButton.disabled = true;
   refreshButton.style.animation = 'spin 1s linear infinite';
   showOllamaStatus('🔄 Fetching available models...', 'info');
-  
+
   try {
     // Dynamically import OllamaService
     const { OllamaService } = await import(chrome.runtime.getURL('services/ollama-service.js'));
-    
+
     const modelsResult = await OllamaService.getAvailableModels(url);
-    
+
     if (modelsResult.isCorsError) {
       showCorsInstructions();
     } else if (modelsResult.models.length > 0) {
@@ -1915,12 +1912,12 @@ async function refreshOllamaModels() {
 function updateModelSelect(models) {
   const modelSelect = document.getElementById('ollama-model');
   if (!modelSelect) return;
-  
+
   const currentValue = modelSelect.value;
-  
+
   // Clear existing options
   modelSelect.innerHTML = '';
-  
+
   // Add models from Ollama
   models.forEach(model => {
     const option = document.createElement('option');
@@ -1928,22 +1925,22 @@ function updateModelSelect(models) {
     option.textContent = model.name;
     modelSelect.appendChild(option);
   });
-  
+
   // Restore previous selection if it exists
   if (currentValue && Array.from(modelSelect.options).some(opt => opt.value === currentValue)) {
     modelSelect.value = currentValue;
   }
-  
+
   dbgLog('Updated model select with', models.length, 'models');
 }
 
 function showOllamaStatus(message, type = 'info') {
   const statusDiv = document.getElementById('ollama-status');
   if (!statusDiv) return;
-  
+
   statusDiv.textContent = message;
   statusDiv.className = `ollama-status show ${type}`;
-  
+
   // Auto-hide after 5 seconds for success messages
   if (type === 'success') {
     setTimeout(() => {
@@ -2193,7 +2190,6 @@ async function saveOpenAISettings() {
   const contextLengthInput = document.getElementById('openai-context-length');
   const tempInput = document.getElementById('openai-temperature');
   const topPInput = document.getElementById('openai-top-p');
-  const topKInput = document.getElementById('openai-top-k');
 
   const selectedProvider = providerSelect ? providerSelect.value : 'openai';
   const url = getEffectiveOpenAIUrl();
@@ -2237,8 +2233,7 @@ async function saveOpenAISettings() {
     model: model,
     contextLength: Number.isFinite(contextLength) && contextLength > 0 ? contextLength : 128000,
     temperature: clampTemperature(tempInput ? tempInput.value : 0.3),
-    top_p: clampTopP(topPInput ? topPInput.value : 0.4),
-    top_k: clampTopK(topKInput ? topKInput.value : 90)
+    top_p: clampTopP(topPInput ? topPInput.value : 0.4)
   };
 
   try {
@@ -2267,19 +2262,19 @@ async function saveOpenAISettings() {
 function showCorsInstructions() {
   const statusDiv = document.getElementById('ollama-status');
   if (!statusDiv) return;
-  
+
   const killCommand = 'killall ollama 2>/dev/null || true; killall Ollama 2>/dev/null || true; sleep 2';
   const startCommand = 'OLLAMA_ORIGINS="chrome-extension://*" ollama serve';
-  
+
   const copyIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
     <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
     <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
   </svg>`;
-  
+
   const checkIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
   </svg>`;
-  
+
   statusDiv.className = 'ollama-status show cors-error';
   statusDiv.innerHTML = `
     <div style="text-align: left;">
@@ -2307,7 +2302,7 @@ function showCorsInstructions() {
       </div>
     </div>
   `;
-  
+
   // Set the data-command attribute after innerHTML is set (avoids HTML escaping issues)
   const copyButtons = statusDiv.querySelectorAll('.cors-copy-btn');
   copyButtons.forEach(button => {
@@ -2315,7 +2310,7 @@ function showCorsInstructions() {
     const command = commandType === 'kill' ? killCommand : startCommand;
     // Use setAttribute to properly set the attribute value without HTML escaping issues
     button.setAttribute('data-command', command);
-    
+
     // Hover effects
     button.addEventListener('mouseenter', () => {
       button.style.color = '#2563eb';
@@ -2325,40 +2320,40 @@ function showCorsInstructions() {
       button.style.color = '#3b82f6';
       button.style.transform = 'scale(1)';
     });
-    
+
     // Click handler
     button.addEventListener('click', () => {
       // getAttribute automatically decodes HTML entities, but since we set it via setAttribute,
       // it should already be the correct value
       const command = button.getAttribute('data-command');
-      
+
       navigator.clipboard.writeText(command).then(() => {
         // Haptic feedback
         if (navigator.vibrate) {
           navigator.vibrate(50);
         }
-        
+
         // Change icon to checkmark
         button.innerHTML = checkIconSVG;
         button.style.color = '#22c55e';
         button.style.transform = 'scale(1.2)';
-        
+
         setTimeout(() => {
           button.style.transform = 'scale(1)';
         }, 100);
-        
+
         // Revert back after 1.5 seconds
         setTimeout(() => {
           button.innerHTML = copyIconSVG;
           button.style.color = '#3b82f6';
         }, 1500);
-        
+
         // Show toast notification
         const toast = document.createElement('div');
         toast.textContent = '✅ Copied to clipboard!';
         toast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #22c55e; color: white; padding: 12px 20px; border-radius: 6px; font-weight: 500; z-index: 10000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); animation: slideInRight 0.3s ease-out;';
         document.body.appendChild(toast);
-        
+
         setTimeout(() => {
           toast.style.transition = 'opacity 0.3s ease-out';
           toast.style.opacity = '0';
@@ -2366,7 +2361,7 @@ function showCorsInstructions() {
         }, 1500);
       }).catch(err => {
         dbgWarn('Copy failed:', err);
-        
+
         // Show error state
         button.style.color = '#ef4444';
         setTimeout(() => {
