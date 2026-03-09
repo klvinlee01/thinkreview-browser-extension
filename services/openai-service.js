@@ -1,13 +1,27 @@
 import { dbgLog, dbgWarn, dbgError } from '../utils/logger.js';
-import { clampOllamaOptions } from '../utils/ollama-options.js';
+import { clampTemperature, clampTopP } from '../utils/ollama-options.js';
 
 
 /**
  * OpenAI-Compatible API Service for ThinkReview
- * Handles code reviews using any OpenAI-compatible endpoint
- * (OpenAI, Groq, Together AI, LM Studio, vLLM, Azure OpenAI, etc.)
+ * Handles code reviews using standard OpenAI-style endpoints
+ * (OpenAI, OpenRouter, Gemini's OpenAI-compatible API, LM Studio, vLLM, and similar APIs).
+ * Excludes Azure OpenAI, which requires dedicated auth headers, deployment paths, and api-version handling.
  */
 export class OpenAIService {
+  /**
+   * Clamp generation settings that are broadly supported by standard OpenAI-style APIs.
+   * Intentionally excludes provider-specific options like top_k.
+   * @param {{ temperature?: number|string, top_p?: number|string }} options
+   * @returns {{ temperature: number, top_p: number }}
+   */
+  static _getCompatibleSamplingOptions(options = {}) {
+    return {
+      temperature: clampTemperature(options.temperature),
+      top_p: clampTopP(options.top_p)
+    };
+  }
+
   /**
    * Review patch code using an OpenAI-compatible endpoint
    * @param {string} patchContent - The patch content in git diff format
@@ -33,10 +47,12 @@ export class OpenAIService {
         model = 'gpt-4o-mini',
         contextLength = 128000,
         temperature: temp,
-        top_p: topP,
-        top_k: topK
+        top_p: topP
       } = config.openaiConfig || {};
-      const { temperature: tempClamped, top_p: topPClamped, top_k: topKClamped } = clampOllamaOptions({ temperature: temp, top_p: topP, top_k: topK });
+      const { temperature: tempClamped, top_p: topPClamped } = this._getCompatibleSamplingOptions({
+        temperature: temp,
+        top_p: topP
+      });
 
       if (!apiKey) {
         throw new Error('API key is not configured. Please enter your API key in ThinkReview settings.');
@@ -110,7 +126,6 @@ Important: Respond ONLY with valid JSON. Do not include any explanatory text bef
         ],
         temperature: tempClamped,
         top_p: topPClamped,
-        top_k: topKClamped,
         stream: false,
         response_format: { type: 'json_object' }
       };
@@ -272,10 +287,12 @@ Important: Respond ONLY with valid JSON. Do not include any explanatory text bef
         apiKey = '',
         model = 'gpt-4o-mini',
         temperature: temp,
-        top_p: topP,
-        top_k: topK
+        top_p: topP
       } = config.openaiConfig || {};
-      const { temperature: tempClamped, top_p: topPClamped, top_k: topKClamped } = clampOllamaOptions({ temperature: temp, top_p: topP, top_k: topK });
+      const { temperature: tempClamped, top_p: topPClamped } = this._getCompatibleSamplingOptions({
+        temperature: temp,
+        top_p: topP
+      });
 
       if (!apiKey) {
         throw new Error('API key is not configured. Please enter your API key in ThinkReview settings.');
@@ -339,7 +356,6 @@ Your role is to answer questions about this code review in a helpful, concise ma
         messages,
         temperature: tempClamped,
         top_p: topPClamped,
-        top_k: topKClamped,
         stream: false
       };
 
